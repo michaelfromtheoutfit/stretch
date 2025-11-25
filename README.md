@@ -280,7 +280,7 @@ Please see [CONTRIBUTING](CONTRIBUTING.md) for details.
 
 ## Security
 
-If you discover any security-related issues, please email devteam@seclock.com instead of using the issue tracker.
+If you discover any security-related issues, please message instead of using the issue tracker.
 
 ## License
 
