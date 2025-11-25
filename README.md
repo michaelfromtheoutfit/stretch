@@ -282,10 +282,6 @@ Please see [CONTRIBUTING](CONTRIBUTING.md) for details.
 
 If you discover any security-related issues, please email devteam@seclock.com instead of using the issue tracker.
 
-## Credits
-
-- [SECLOCK Team](https://github.com/seclock)
-
 ## License
 
 The MIT License (MIT). Please see [License File](LICENSE.md) for more information.
