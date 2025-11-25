@@ -1,6 +1,5 @@
 providers:
     - Spatie\LaravelRay\RayServiceProvider
-    - Spatie\LaravelData\LaravelDataServiceProvider
     - JayI\Stretch\StretchServiceProvider
 env:
     - RAY_ENABLED=(true)
