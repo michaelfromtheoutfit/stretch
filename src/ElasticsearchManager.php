@@ -89,7 +89,32 @@ class ElasticsearchManager
     {
         $config = $this->getConnectionConfig($name);
 
-        return ClientBuilder::fromConfig($config);
+        $clientBuilder = ClientBuilder::create()
+            ->setHosts($config['hosts']);
+
+        // Configure authentication
+        if (! empty($config['username']) && ! empty($config['password'])) {
+            $clientBuilder->setBasicAuthentication($config['username'], $config['password']);
+        }
+
+        if (! empty($config['api_key'])) {
+            $clientBuilder->setApiKey($config['api_key']);
+        }
+
+        if (! empty($config['cloud_id'])) {
+            $clientBuilder->setElasticCloudId($config['cloud_id']);
+        }
+
+        // SSL configuration
+        if (! $config['ssl_verification']) {
+            $clientBuilder->setSSLVerification(false);
+        }
+
+        if(config('stretch.logging.enabled')) {
+            $clientBuilder->setLogger($this->app['log']);
+        }
+
+        return $clientBuilder->build();
     }
 
     /**

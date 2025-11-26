@@ -24,19 +24,14 @@ return [
     */
     'connections' => [
         'default' => [
-            'Hosts' => [
+            'hosts' => [
                 env('ELASTICSEARCH_HOST', 'localhost:9200'),
             ],
-//            'BasicAuthentication' => [
-//                'username' => env('ELASTICSEARCH_USERNAME'),
-//                'password' => env('ELASTICSEARCH_PASSWORD'),
-//            ],
-            'ElasticCloudId' => env('ELASTICSEARCH_CLOUD_ID'),
-            'ApiKey' => [
-                'apiKey' => env('ELASTICSEARCH_API_KEY'),
-                'id' => env('ELASTICSEARCH_API_ID')
-            ],
-            'SSLVerification' => env('ELASTICSEARCH_SSL_VERIFICATION', true),
+            'username' => env('ELASTICSEARCH_USERNAME'),
+            'password' => env('ELASTICSEARCH_PASSWORD'),
+            'cloud_id' => env('ELASTICSEARCH_CLOUD_ID'),
+            'api_key' => env('ELASTICSEARCH_API_KEY'),
+            'ssl_verification' => env('ELASTICSEARCH_SSL_VERIFICATION', true),
         ],
     ],
 
