@@ -72,9 +72,9 @@ return [
     |
     */
     'logging' => [
-        'enabled' => env('STRETCH_LOGGING_ENABLED', false),
+        'enabled' => env('STRETCH_LOGGING_ENABLED', env('APP_DEBUG', false)),
         'channel' => env('STRETCH_LOG_CHANNEL', 'default'),
-        'log_queries' => env('STRETCH_LOG_QUERIES', false),
+        'log_queries' => env('STRETCH_LOG_QUERIES', env('APP_DEBUG', false)),
         'log_slow_queries' => env('STRETCH_LOG_SLOW_QUERIES', true),
         'slow_query_threshold' => env('STRETCH_SLOW_QUERY_THRESHOLD', 1000), // milliseconds
     ],
@@ -88,7 +88,7 @@ return [
     |
     */
     'cache' => [
-        'enabled' => env('STRETCH_CACHE_ENABLED', false),
+        'enabled' => env('STRETCH_CACHE_ENABLED', true),
         'ttl' => env('STRETCH_CACHE_TTL', [300, 600]),
         'prefix' => env('STRETCH_CACHE_PREFIX', 'stretch:'),
         'driver' => env('STRETCH_CACHE_DRIVER', 'default'),
