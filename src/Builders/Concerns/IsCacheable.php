@@ -228,8 +228,8 @@ trait IsCacheable
         $indexes = collect([]);
 
         /** @phpstan-ignore function.alreadyNarrowedType */
-        if (property_exists($this, 'index')) {
-            $indexes = $indexes->push($this->index);
+        if (method_exists($this, 'getIndex')) {
+            $indexes = $indexes->push($this->getIndex());
         }
 
         /** @phpstan-ignore function.alreadyNarrowedType */

@@ -164,8 +164,8 @@ it('getIndexes returns single index for query builder', function () {
 it('getIndexes returns multiple indexes for multi query builder', function () {
     $multiBuilder = new MultiQueryBuilder;
 
-    $multiBuilder->add('products', fn ($q) => $q->match('name', 'test'));
-    $multiBuilder->add('categories', fn ($q) => $q->match('title', 'electronics'));
+    $multiBuilder->add('products_query', fn ($q) => $q->index('products')->match('name', 'test'));
+    $multiBuilder->add('categories_query', fn ($q) => $q->index('categories')->match('title', 'electronics'));
 
     $indexes = $multiBuilder->getIndexes();
 
@@ -176,12 +176,13 @@ it('getIndexes returns multiple indexes for multi query builder', function () {
 it('getIndexes returns unique indexes for multi query builder', function () {
     $multiBuilder = new MultiQueryBuilder;
 
-    $multiBuilder->add('products', fn ($q) => $q->match('name', 'test'));
-    $multiBuilder->add('products', fn ($q) => $q->match('name', 'another'));
-    $multiBuilder->add('categories', fn ($q) => $q->match('title', 'electronics'));
+    $multiBuilder->add('products_query_1', fn ($q) => $q->index('products')->match('name', 'test'));
+    $multiBuilder->add('products_query_2', fn ($q) => $q->index('products')->match('name', 'another'));
+    $multiBuilder->add('categories_query', fn ($q) => $q->index('categories')->match('title', 'electronics'));
 
     $indexes = $multiBuilder->getIndexes();
 
+    // Should only have 2 unique indexes: products and categories
     expect($indexes->count())->toBe(2);
 });
 

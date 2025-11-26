@@ -131,18 +131,20 @@ $results = Stretch::index(['index_1', 'index_2'])
 
 ```php
  // Execute multiple searches in a single request
+ // add method accepts a name and Closure/ElasticQueryBuilder instance
   $results = Stretch::multi()
-      ->add('posts', fn ($q) => $q->match('title', 'Laravel')->size(10))
-      ->add('users', fn ($q) => $q->term('status', 'active'))
-      ->add(['logs', 'events'], fn ($q) => $q->range('timestamp')->gte('2024-01-01'))
+      ->add('postQuery', fn ($q) => $q->index('posts')->match('title', 'Laravel')->size(10))
+      ->add('userQuery', fn ($q) => $q->index('users')->term('status', 'active'))
+      ->add('eventLogQuery', fn ($q) => $q->index(['logs', 'events'])->range('timestamp')->gte('2024-01-01'))
       ->execute();
 
   // Access individual responses
-  $postsResults = $results['responses'][0];
-  $usersResults = $results['responses'][1];
+  $postsResults = $results['responses']['postQuery'];
+  $usersResults = $results['responses']['userQuery'];
+  $eventLogResults = $results['responses']['eventLogQuery'];
 
   // Or use a query builder instance directly
-  $postQuery = Stretch::query()->match('title', 'Laravel');
+  $postQuery = Stretch::index('posts')->match('title', 'Laravel');
   Stretch::multi()
       ->add('posts', $postQuery)
       ->execute();

@@ -694,8 +694,8 @@ class ElasticsearchQueryBuilder implements QueryBuilderContract
         $body = $this->build();
         $params = [];
 
-        if ($this->index) {
-            $params['index'] = $this->index;
+        if ($this->getIndex()) {
+            $params['index'] = $this->getIndex();
         }
 
         if (! empty($body)) {
@@ -762,5 +762,10 @@ class ElasticsearchQueryBuilder implements QueryBuilderContract
     protected function addQueryProtected(array $query): void
     {
         $this->query[] = $query;
+    }
+
+    public function getIndex(): string|array|null
+    {
+        return $this->index;
     }
 }

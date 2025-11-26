@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace JayI\Stretch\Builders;
 
+use Illuminate\Support\Arr;
 use JayI\Stretch\Builders\Concerns\IsCacheable;
 use JayI\Stretch\Client\ElasticsearchClient;
 use JayI\Stretch\Contracts\ClientContract;
@@ -67,8 +68,8 @@ class MultiQueryBuilder implements MultiQueryBuilderContract
      * Each query can target different indices and have its own search criteria.
      * Queries are executed in parallel by Elasticsearch.
      *
-     * @param  string|array  $index  The index or indices to search
-     * @param  callable|QueryBuilderContract  $query  A callback or query builder instance
+     * @param string $name
+     * @param callable|QueryBuilderContract $query A callback or query builder instance
      * @return static Returns the builder instance for method chaining
      *
      * @example
@@ -78,7 +79,7 @@ class MultiQueryBuilder implements MultiQueryBuilderContract
      *         ->add(['users', 'profiles'], fn($q) => $q->term('active', true));
      * ```
      */
-    public function add(string|array $index, callable|QueryBuilderContract $query): static
+    public function add(string $name, callable|QueryBuilderContract $query): static
     {
         if (is_callable($query)) {
             $builder = new ElasticsearchQueryBuilder($this->client, $this->manager);
@@ -86,8 +87,8 @@ class MultiQueryBuilder implements MultiQueryBuilderContract
             $query = $builder;
         }
 
-        $this->queries[] = [
-            'index' => $index,
+        $this->queries[$name] = [
+            'index' => $query->getIndex(),
             'query' => $query,
         ];
 
@@ -107,7 +108,9 @@ class MultiQueryBuilder implements MultiQueryBuilderContract
     {
         $body = [];
 
-        foreach ($this->queries as $entry) {
+        $queries = collect($this->queries)->sortKeys()->toArray();
+
+        foreach ($queries as $entry) {
             // Header line - specifies the index
             $header = [];
             if (is_array($entry['index'])) {
@@ -157,7 +160,16 @@ class MultiQueryBuilder implements MultiQueryBuilderContract
             return ['responses' => []];
         }
 
-        return $this->client->msearch(['body' => $this->build()]);
+        $results = $this->client->msearch(['body' => $this->build()]);
+
+        $key = -1;
+        $results['responses'] = collect($this->queries)->sortKeys()->map(function () use (&$results, &$key) {
+            $key++;
+            return Arr::get($results, "responses.{$key}");
+        })->toArray();
+
+        return $results;
+
     }
 
     /**
@@ -179,4 +191,5 @@ class MultiQueryBuilder implements MultiQueryBuilderContract
     {
         return count($this->queries);
     }
+
 }

@@ -10,7 +10,7 @@ use Mockery as m;
 it('can add a query using a callback', function () {
     $builder = new MultiQueryBuilder;
 
-    $builder->add('posts', fn ($q) => $q->match('title', 'Laravel'));
+    $builder->add('posts_query', fn ($q) => $q->index('posts')->match('title', 'Laravel'));
 
     $body = $builder->build();
 
@@ -21,10 +21,10 @@ it('can add a query using a callback', function () {
 
 it('can add a query using a query builder instance', function () {
     $queryBuilder = new ElasticsearchQueryBuilder;
-    $queryBuilder->match('title', 'Laravel');
+    $queryBuilder->index('posts')->match('title', 'Laravel');
 
     $builder = new MultiQueryBuilder;
-    $builder->add('posts', $queryBuilder);
+    $builder->add('posts_query', $queryBuilder);
 
     $body = $builder->build();
 
@@ -37,22 +37,23 @@ it('can add multiple queries', function () {
     $builder = new MultiQueryBuilder;
 
     $builder
-        ->add('posts', fn ($q) => $q->match('title', 'Laravel'))
-        ->add('users', fn ($q) => $q->term('status', 'active'))
-        ->add('comments', fn ($q) => $q->exists('body'));
+        ->add('a_posts', fn ($q) => $q->index('posts')->match('title', 'Laravel'))
+        ->add('b_users', fn ($q) => $q->index('users')->term('status', 'active'))
+        ->add('c_comments', fn ($q) => $q->index('comments')->exists('body'));
 
     $body = $builder->build();
 
+    // Queries are sorted by key name
     expect($body)->toHaveCount(6);
-    expect($body[0])->toBe(['index' => 'posts']);
-    expect($body[2])->toBe(['index' => 'users']);
-    expect($body[4])->toBe(['index' => 'comments']);
+    expect($body[0])->toBe(['index' => 'posts']);    // a_posts
+    expect($body[2])->toBe(['index' => 'users']);    // b_users
+    expect($body[4])->toBe(['index' => 'comments']); // c_comments
 });
 
 it('handles array indices', function () {
     $builder = new MultiQueryBuilder;
 
-    $builder->add(['posts', 'pages'], fn ($q) => $q->match('content', 'search'));
+    $builder->add('multi_index_query', fn ($q) => $q->index(['posts', 'pages'])->match('content', 'search'));
 
     $body = $builder->build();
 
@@ -75,7 +76,7 @@ it('executes msearch with correct body structure', function () {
     $mockClient->shouldReceive('msearch')
         ->once()
         ->with(m::on(function ($params) {
-            // Verify msearch body structure
+            // Verify msearch body structure (sorted by key: a_posts, b_users)
             return isset($params['body'])
                 && count($params['body']) === 4
                 && $params['body'][0] === ['index' => 'posts']
@@ -93,16 +94,17 @@ it('executes msearch with correct body structure', function () {
     $builder = new MultiQueryBuilder($mockClient);
 
     $result = $builder
-        ->add('posts', fn ($q) => $q->match('title', 'Laravel'))
-        ->add('users', fn ($q) => $q->term('status', 'active'))
+        ->add('a_posts', fn ($q) => $q->index('posts')->match('title', 'Laravel'))
+        ->add('b_users', fn ($q) => $q->index('users')->term('status', 'active'))
         ->execute();
 
     expect($result['responses'])->toHaveCount(2);
+    expect($result['responses'])->toHaveKeys(['a_posts', 'b_users']);
 });
 
 it('throws exception when executing without client', function () {
     $builder = new MultiQueryBuilder;
-    $builder->add('posts', fn ($q) => $q->match('title', 'Laravel'));
+    $builder->add('posts_query', fn ($q) => $q->index('posts')->match('title', 'Laravel'));
 
     $builder->execute();
 })->throws(RuntimeException::class, 'Client not set');
@@ -112,16 +114,16 @@ it('can count queries', function () {
 
     expect($builder->count())->toBe(0);
 
-    $builder->add('posts', fn ($q) => $q->match('title', 'Laravel'));
+    $builder->add('posts_query', fn ($q) => $q->index('posts')->match('title', 'Laravel'));
     expect($builder->count())->toBe(1);
 
-    $builder->add('users', fn ($q) => $q->term('status', 'active'));
+    $builder->add('users_query', fn ($q) => $q->index('users')->term('status', 'active'));
     expect($builder->count())->toBe(2);
 });
 
 it('toArray returns same as build', function () {
     $builder = new MultiQueryBuilder;
-    $builder->add('posts', fn ($q) => $q->match('title', 'Laravel'));
+    $builder->add('posts_query', fn ($q) => $q->index('posts')->match('title', 'Laravel'));
 
     expect($builder->toArray())->toBe($builder->build());
 });
@@ -129,7 +131,8 @@ it('toArray returns same as build', function () {
 it('supports complex queries with size and sort', function () {
     $builder = new MultiQueryBuilder;
 
-    $builder->add('posts', fn ($q) => $q
+    $builder->add('posts_query', fn ($q) => $q
+        ->index('posts')
         ->match('title', 'Laravel')
         ->size(10)
         ->from(0)
@@ -146,7 +149,8 @@ it('supports complex queries with size and sort', function () {
 it('supports bool queries within multi-search', function () {
     $builder = new MultiQueryBuilder;
 
-    $builder->add('posts', fn ($q) => $q
+    $builder->add('posts_query', fn ($q) => $q
+        ->index('posts')
         ->bool(function ($bool) {
             $bool->must(fn ($q) => $q->match('title', 'Laravel'));
             $bool->filter(fn ($q) => $q->term('status', 'published'));
@@ -157,4 +161,30 @@ it('supports bool queries within multi-search', function () {
 
     expect($body[1]['query']['bool'])->toHaveKey('must');
     expect($body[1]['query']['bool'])->toHaveKey('filter');
+});
+
+it('returns named results from execute', function () {
+    $mockClient = m::mock(ClientContract::class);
+
+    $mockClient->shouldReceive('msearch')
+        ->once()
+        ->andReturn([
+            'responses' => [
+                ['hits' => ['total' => ['value' => 5], 'hits' => [['_id' => '1']]]],
+                ['hits' => ['total' => ['value' => 10], 'hits' => [['_id' => '2']]]],
+            ],
+        ]);
+
+    $builder = new MultiQueryBuilder($mockClient);
+
+    $result = $builder
+        ->add('a_posts', fn ($q) => $q->index('posts')->match('title', 'Laravel'))
+        ->add('b_users', fn ($q) => $q->index('users')->term('status', 'active'))
+        ->execute();
+
+    // Results are keyed by query name
+    expect($result['responses'])->toHaveKey('a_posts');
+    expect($result['responses'])->toHaveKey('b_users');
+    expect($result['responses']['a_posts']['hits']['total']['value'])->toBe(5);
+    expect($result['responses']['b_users']['hits']['total']['value'])->toBe(10);
 });

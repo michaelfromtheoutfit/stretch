@@ -221,4 +221,9 @@ interface QueryBuilderContract
      * @param  array  $rangeQuery  The updated range query
      */
     public function updateLastRangeQuery(string $field, array $rangeQuery): void;
+
+    /**
+     * Return the query's index
+     */
+    public function getIndex(): string|array|null;
 }
