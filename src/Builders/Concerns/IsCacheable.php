@@ -41,9 +41,9 @@ trait IsCacheable
     /**
      * Custom TTL for flexible caching [fresh, stale].
      *
-     * @var array<int>|null
+     * @var array|int|null
      */
-    protected ?array $cacheTtl = null;
+    protected array|int|null $cacheTtl = null;
 
     /**
      * Custom prefix for cache keys.
@@ -140,7 +140,7 @@ trait IsCacheable
      * Uses Laravel's flexible cache method, which supports stale-while-revalidate.
      * The first value is the "fresh" period, the second is the "stale" period.
      *
-     * @param array<int> $ttl Array of [fresh_seconds, stale_seconds]
+     * @param array|int $ttl Array of [fresh_seconds, stale_seconds] or int
      * @return MultiQueryBuilder|IsCacheable|ElasticsearchQueryBuilder Returns the builder instance for method chaining
      *
      * @example
@@ -148,7 +148,7 @@ trait IsCacheable
      * ->setCacheTtl([300, 600]) // Fresh for 5 min, stale for 10 min
      * ```
      */
-    public function setCacheTtl(array $ttl): self
+    public function setCacheTtl(array|int $ttl): self
     {
         $this->cacheTtl = $ttl;
 
@@ -160,9 +160,9 @@ trait IsCacheable
      *
      * Returns the custom TTL if set, otherwise falls back to config value.
      *
-     * @return array<int> The TTL array [fresh_seconds, stale_seconds]
+     * @return array|int The TTL array [fresh_seconds, stale_seconds]
      */
-    public function getCacheTtl(): array
+    public function getCacheTtl(): array|int
     {
         return $this->cacheTtl ?? config('stretch.cache.ttl', [300, 600]);
     }
@@ -281,14 +281,18 @@ trait IsCacheable
     public function __call(string $name, array $arguments)
     {
         $callback = fn () => call_user_func_array([$this, $name], $arguments);
+        $ttl = $this->getCacheTtl();
+        $method = is_array($ttl) ? 'flexible' : 'remember';
+
+        $arguments = [
+            'key' => $this->getCacheKey($this->getCacheClear()),
+            'ttl' => $ttl,
+            'callback' => $callback,
+        ];
 
         return when(
             condition: $this->isCacheEnabled() && ($name == 'execute'),
-            value: fn () => Cache::store($this->getCacheStore())->flexible(
-                key: $this->getCacheKey($this->getCacheClear()),
-                ttl: $this->getCacheTtl(),
-                callback: $callback
-            ),
+            value: fn () => Cache::store($this->getCacheStore())->{$method}(...$arguments),
             default: $callback,
         );
     }
